@@ -1,10 +1,10 @@
-# Copyright 1999-2023 Gentoo Authors
+# Copyright 1999-2024 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 
 DISTUTILS_USE_PEP517=setuptools
-PYTHON_COMPAT=( python3_{9..11} )
+PYTHON_COMPAT=( python3_{9..12} )
 
 inherit distutils-r1
 
@@ -29,6 +29,10 @@ DEPEND="
 	)
 "
 
+PATCHES=(
+	"${FILESDIR}"/${P}-python-312.patch
+)
+
 distutils_enable_tests pytest
 
 EPYTEST_DESELECT=(
@@ -37,6 +41,8 @@ EPYTEST_DESELECT=(
 	tests/entrypoints/test_not_configured.py
 	tests/test_utils.py::test_get_all_executables_exclude_paths
 	tests/test_utils.py::TestCache
+	# These tests fail with py312; #929026
+	tests/test_utils.py::TestGetValidHistoryWithoutCurrent::test_get_valid_history_without_current
 )
 
 python_prepare_all() {
