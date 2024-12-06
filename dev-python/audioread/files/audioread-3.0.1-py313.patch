@@ -1,0 +1,26 @@
+https://github.com/beetbox/audioread/pull/145
+https://github.com/beetbox/audioread/commit/c81adeb553f25f408a85803afcff7d3efd11f722
+From: Luke Blaney <git@lukeblaney.co.uk>
+Date: Wed, 30 Oct 2024 18:42:47 +0000
+Subject: [PATCH] Add standard-aifc and standard-sunau as dependencies for
+ python 3.13 and above. Python core removed these modules in 3.13 as part of
+ PEP-594 https://peps.python.org/pep-0594/ The standard-* modules are forks of
+ the modules that had previously been in the python core. Fixes
+ https://github.com/beetbox/audioread/issues/144a
+
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -21,6 +21,11 @@ classifiers = [
+     'Programming Language :: Python :: 3.11',
+ ]
+ 
++dependencies = [
++    "standard-aifc; python_version >= '3.13'",
++    "standard-sunau; python_version >= '3.13'",
++]
++
+ [project.optional-dependencies]
+ test = [
+     "tox"
+-- 
+2.47.0
