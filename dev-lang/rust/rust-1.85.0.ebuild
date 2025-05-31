@@ -37,6 +37,7 @@ elif [[ ${PV} == *beta* ]]; then
 	BETA_SNAPSHOT="${betaver:0:4}-${betaver:4:2}-${betaver:6:2}"
 	MY_P="rustc-beta"
 	SRC_URI="https://static.rust-lang.org/dist/${BETA_SNAPSHOT}/rustc-beta-src.tar.xz -> rustc-${PV}-src.tar.xz
+		https://gitweb.gentoo.org/proj/rust-patches.git/snapshot/rust-patches-${PVR}.tar.bz2
 		verify-sig? ( https://static.rust-lang.org/dist/${BETA_SNAPSHOT}/rustc-beta-src.tar.xz.asc
 			-> rustc-${PV}-src.tar.xz.asc )
 	"
@@ -44,6 +45,7 @@ elif [[ ${PV} == *beta* ]]; then
 else
 	MY_P="rustc-${PV}"
 	SRC_URI="https://static.rust-lang.org/dist/${MY_P}-src.tar.xz
+		https://gitweb.gentoo.org/proj/rust-patches.git/snapshot/rust-patches-${PVR}.tar.bz2
 		verify-sig? ( https://static.rust-lang.org/dist/${MY_P}-src.tar.xz.asc )
 	"
 	S="${WORKDIR}/${MY_P}-src"
@@ -170,11 +172,6 @@ RESTRICT="test"
 
 VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/rust.asc
 
-PATCHES=(
-	"${FILESDIR}"/1.85.0-cross-compile-libz.patch
-	"${FILESDIR}"/1.67.0-doc-wasm.patch
-)
-
 clear_vendor_checksums() {
 	sed -i 's/\("files":{\)[^}]*/\1/' "vendor/${1}/.cargo-checksum.json" || die
 }
@@ -183,9 +180,36 @@ toml_usex() {
 	usex "${1}" true false
 }
 
+fetch_and_unpack_live_rust_patches() {
+	local git_repo="https://gitweb.gentoo.org/proj/rust-patches.git"
+	local branch_name="master"
+
+	# First we need to get the commit hash for our branch; we can use `git ls-remote` to do this since we're
+	# only ever doing so in live ebuild mode.
+	local commit_hash
+	commit_hash=$(git ls-remote "${git_repo}" "refs/heads/${branch_name}" | \
+					grep "refs/heads/${branch_name}" | \
+					awk '{print $1}')
+	if [[ -z ${commit_hash} ]]; then
+		die "Failed to fetch latest commit hash from ${git_repo} for branch ${branch_name}"
+	fi
+	einfo "Latest rust-patches commit: ${commit_hash}"
+	# Now we can fetch the archive from the gitweb URL.
+	curl --progress-bar -L \
+		"https://anongit.gentoo.org/proj/rust-patches.git/snapshot/rust-patches-${commit_hash}.tar.bz2" \
+		-o "${T}/rust-patches-${commit_hash}.tar.bz2" ||
+			die "Failed to fetch rust-patches archive from ${git_repo} for commit ${commit_hash}"
+
+	# Now we can unpack the archive into the WORKDIR in its expected location.
+	mkdir -p "${WORKDIR}/rust-patches-${PVR}" || die
+	tar -xjf "${T}/rust-patches-${commit_hash}.tar.bz2" -C "${WORKDIR}/rust-patches-${PVR}" --strip-components=1 || \
+		die "Failed to unpack rust-patches archive into ${WORKDIR}/rust-patches-${PVR}"
+}
+
 src_unpack() {
 	if [[ ${PV} = *9999* ]]; then
 		git-r3_src_unpack
+		fetch_and_unpack_live_rust_patches
 		mkdir "${S}/.cargo" || die # The vendor script has a check for .cargo/config{,.toml}
 		touch "${S}/.cargo/config.toml" || die
 		local rust_stage0_root="$(${RUSTC} --print sysroot || die "Can't determine rust's sysroot")"
@@ -300,17 +324,13 @@ pkg_setup() {
 src_prepare() {
 	if [[ ${PV} = *9999* ]]; then
 		# We need to update / generate lockfiles for the workspace
-		${CARGO} generate-lockfile --offline
-
+		${CARGO} generate-lockfile --offline || die "Failed to generate lockfiles"
 	fi
-	# Rust baselines to Pentium4 on x86, this patch lowers the baseline to i586 when sse2 is not set.
-	if use x86; then
-		if ! use cpu_flags_x86_sse2; then
-			eapply "${FILESDIR}/1.82.0-i586-baseline.patch"
-			#grep -rl cmd.args.push\(\"-march=i686\" . | xargs sed  -i 's/march=i686/-march=i586/g' || die
-		fi
-	fi
-
+	shopt -s nullglob
+	PATCHES=(
+		"${WORKDIR}/rust-patches-${PVR}/"*.patch
+	)
+	shopt -u nullglob
 	if use lto && tc-is-clang && ! tc-ld-is-lld && ! tc-ld-is-mold; then
 		export RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
 	fi

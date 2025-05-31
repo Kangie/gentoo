@@ -140,15 +140,6 @@ RESTRICT="test"
 
 VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/rust.asc
 
-PATCHES=(
-	"${FILESDIR}"/1.75.0-musl-dynamic-linking.patch
-	"${FILESDIR}"/1.74.1-cross-compile-libz.patch
-	"${FILESDIR}"/1.70.0-ignore-broken-and-non-applicable-tests.patch
-	"${FILESDIR}"/1.67.0-doc-wasm.patch
-	"${FILESDIR}"/1.75.0-handle-vendored-sources.patch
-	"${FILESDIR}"/1.76.0-loong-code-model.patch  # remove for >=1.78.0
-)
-
 clear_vendor_checksums() {
 	sed -i 's/\("files":{\)[^}]*/\1/' "vendor/${1}/.cargo-checksum.json" || die
 }
@@ -225,6 +216,14 @@ pkg_setup() {
 		export LLVM_LINK_SHARED=1
 		export RUSTFLAGS="${RUSTFLAGS} -Lnative=$("${llvm_config}" --libdir)"
 	fi
+}
+
+src_prepare() {
+	shopt -s nullglob
+	PATCHES=(
+		"${WORKDIR}/rust-patches-${PVR}/"*.patch
+	)
+	shopt -u nullglob
 }
 
 src_configure() {

@@ -32,6 +32,7 @@ HOMEPAGE="https://www.rust-lang.org/"
 
 SRC_URI="
 	https://static.rust-lang.org/dist/${SRC}
+	https://gitweb.gentoo.org/proj/rust-patches.git/snapshot/rust-patches-${PVR}.tar.bz2
 	verify-sig? ( https://static.rust-lang.org/dist/${SRC}.asc )
 "
 
@@ -151,13 +152,6 @@ RESTRICT="test"
 
 VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/rust.asc
 
-PATCHES=(
-	"${FILESDIR}"/1.74.1-cross-compile-libz.patch
-	"${FILESDIR}"/1.70.0-ignore-broken-and-non-applicable-tests.patch
-	"${FILESDIR}"/1.62.1-musl-dynamic-linking.patch
-	"${FILESDIR}"/1.67.0-doc-wasm.patch
-)
-
 clear_vendor_checksums() {
 	sed -i 's/\("files":{\)[^}]*/\1/' "vendor/${1}/.cargo-checksum.json" || die
 }
@@ -248,6 +242,11 @@ pkg_setup() {
 }
 
 src_prepare() {
+	shopt -s nullglob
+	PATCHES=(
+		"${WORKDIR}/rust-patches-${PVR}/"*.patch
+	)
+	shopt -u nullglob
 	default
 	# We'll need to revert this after the bootstrap.
 	if use mrustc-bootstrap; then

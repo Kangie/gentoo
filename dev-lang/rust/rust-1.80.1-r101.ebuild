@@ -28,6 +28,7 @@ HOMEPAGE="https://www.rust-lang.org/"
 
 SRC_URI="
 	https://static.rust-lang.org/dist/${SRC}
+	https://gitweb.gentoo.org/proj/rust-patches.git/snapshot/rust-patches-${PVR}.tar.bz2
 	verify-sig? ( https://static.rust-lang.org/dist/${SRC}.asc )
 "
 S="${WORKDIR}/${MY_P}-src"
@@ -140,13 +141,6 @@ RESTRICT="test"
 
 VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/rust.asc
 
-PATCHES=(
-	"${FILESDIR}"/1.78.0-musl-dynamic-linking.patch
-	"${FILESDIR}"/1.74.1-cross-compile-libz.patch
-	"${FILESDIR}"/1.67.0-doc-wasm.patch
-	"${FILESDIR}"/1.79.0-revert-8c40426.patch
-)
-
 clear_vendor_checksums() {
 	sed -i 's/\("files":{\)[^}]*/\1/' "vendor/${1}/.cargo-checksum.json" || die
 }
@@ -223,6 +217,14 @@ pkg_setup() {
 		export LLVM_LINK_SHARED=1
 		export RUSTFLAGS="${RUSTFLAGS} -Lnative=$("${llvm_config}" --libdir)"
 	fi
+}
+
+src_prepare() {
+	shopt -s nullglob
+	PATCHES=(
+		"${WORKDIR}/rust-patches-${PVR}/"*.patch
+	)
+	shopt -u nullglob
 }
 
 src_configure() {
