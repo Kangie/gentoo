@@ -173,8 +173,9 @@ www-client/firefox wasm-sandbox
 # Matt Jolly <kangie@gentoo.org> (2024-11-11)
 # ICU 76.1 is not compatible with Chromium. Bug #943216.
 # We'll mask it for a few weeks to use the bundled ICU
-# while Google fixes the issue.
+# while Google fixes the issues
 www-client/chromium system-icu
+dev-util/electron system-icu
 
 # Joonas Niilola <juippis@gentoo.org> (2024-11-07)
 # Dependency for generating docs not packaged in Gentoo. #942992
