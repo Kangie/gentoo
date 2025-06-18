@@ -67,7 +67,7 @@ LICENSE+=" FFT2D FTL IJG ISC LGPL-2 LGPL-2.1 libpng libpng2 MIT MPL-1.1 MPL-2.0 
 LICENSE+=" SGI-B-2.0 SSLeay SunSoft Unicode-3.0 Unicode-DFS-2015 Unlicense UoI-NCSA X11-Lucent"
 LICENSE+=" rar? ( unRAR )"
 
-SLOT="135" # https://github.com/nodejs/node/blob/main/doc/abi_version_registry.json
+SLOT="${PV%%\.*}"
 KEYWORDS="~amd64 ~arm64"
 
 IUSE_SYSTEM_LIBS="+system-harfbuzz +system-icu +system-png +system-zstd"
@@ -253,41 +253,13 @@ pre_build_checks() {
 	# We're going to start doing maths here on the size of an unpacked source tarball,
 	# this should make updates easier as chromium continues to balloon in size.
 	# xz -l /var/cache/distfiles/electron-${PV}*.tar.xz
-	get_tarball_size() {
-		# This function returns the size of a tarball in GB (rounded up), and dies if the tarball is not found.
-		# It supports .xz and .gz tarballs
-		local tarball="$1"
-		[[ -n ${tarball} ]] || die "Usage: get_tarball_size <tarball>"
-		[[ -f "${tarball}" ]] || die "Tarball ${tarball} not found"
-
-		case "${tarball}" in
-			*.xz)
-				# Get uncompressed size in MiB, convert to GB (rounded up: (mib + 1023) / 1024)
-				xz -l "${tarball}" | awk '/\.xz$/ {
-					gsub(",", "", $5);
-					sub(/\..*$/, "", $5);
-					mib=$5;
-					print int((mib + 1023) / 1024)
-				}' || die "Failed to get size of ${tarball}"
-				;;
-			*.gz)
-				# Get uncompressed size in bytes, convert to GB (rounded up: (bytes + 1073741823) / 1073741824)
-				gzip -l "${tarball}" | awk 'NR==2 {
-					bytes=$2;
-					print int((bytes + 1073741823) / 1073741824)
-				}' || die "Failed to get size of ${tarball}"
-				;;
-			*)
-				die "Unknown tarball extension for ${tarball}"
-				;;
-		esac
-	}
-	# Chromium
-	local chromium_disk=$(get_tarball_size "${DISTDIR}/chromium-${CHROMIUM_VER}-linux.tar.xz")
-	use test && chromium_disk=$((
-		$(get_tarball_size "${DISTDIR}/chromium-${CHROMIUM_VER}-linux-testdata.tar.xz") + chromium_disk
-		))
+	local chromium_tarball_size=9
+	local chromium_testdata_tarball_size=5
+	local node_tarball_size=1
 	local extra_disk=1 # Always include a little extra space
+	# Chromium
+	local chromium_disk=$chromium_tarball_size
+	use test && chromium_disk=$(( chromium_testdata_tarball_size + chromium_disk ))
 	local memory=4
 	tc-is-cross-compiler && extra_disk=$((extra_disk * 2))
 	if tc-is-lto || use pgo; then
@@ -303,7 +275,7 @@ pre_build_checks() {
 	fi
 	local CHECKREQS_MEMORY="${memory}G"
 	# NodeJs (build is just over twice the size of the tarball, so add 1G to be safe)
-	local node_disk=$(( $(get_tarball_size "${DISTDIR}/node-v${NODE_VER}.tar.xz") + 1 ))
+	local node_disk=$((node_tarball_size + 1))
 	# Electron is basically a rounding error here, consider it accounted for by the extra_disk
 	local CHECKREQS_DISK_BUILD="$(( chromium_disk + extra_disk + node_disk ))G"
 	check-reqs_${EBUILD_PHASE_FUNC}

@@ -26,7 +26,7 @@ CHROMIUM_VERSION="138" # Check the releases page; gets correct chromium-ffmpeg v
 LICENSE="BSD Apache-2.0 Apache-2.0-with-LLVM-exceptions BSD-2 Base64 Boost-1.0 CC-BY-3.0 CC-BY-4.0 Clear-BSD"
 LICENSE+=" FFT2D FTL IJG ISC LGPL-2 LGPL-2.1 libpng libpng2 MIT MPL-1.1 MPL-2.0 Ms-PL openssl PSF-2"
 LICENSE+=" SGI-B-2.0 SSLeay SunSoft Unicode-3.0 Unicode-DFS-2015 Unlicense unRAR UoI-NCSA X11-Lucent"
-SLOT="136" # https://github.com/nodejs/node/blob/main/doc/abi_version_registry.json
+SLOT="${PV%%\.*}"
 # Someone can handle arm, I don't have anything to test it on.
 KEYWORDS="~amd64 ~arm64"
 
