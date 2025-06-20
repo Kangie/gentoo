@@ -1,6 +1,11 @@
 # Copyright 1999-2025 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
+# Matt Jolly <kangie@gentooo.org> (2025-06-20)
+# Electron can't run on musl
+dev-util/electron
+dev-util/electron-bin
+
 # NHOrus <jy6x2b32pie9@yahoo.com> (2025-03-13)
 # uses functions musl will not implement, bug #942215
 app-admin/sud
