@@ -1,0 +1,35 @@
+https://build.opensuse.org/projects/network:im:signal/packages/libsignal/files/libsignal-client-visibility-hidden.patch
+Do not export internal glue symbols from the final cdylib while making them still unmangled for the linker. See https://github.com/rust-lang/rust/issues/73958
+This is likely not upstreamable due to depending on the details of the rustc linux port.
+
+--- libsignal-client/rust/bridge/shared/src/lib.rs.old
++++ libsignal-client/rust/bridge/shared/src/lib.rs
+@@ -1,3 +1,4 @@
++#![feature(rustc_attrs)]
+ //
+ // Copyright 2020-2021 Signal Messenger, LLC.
+ // SPDX-License-Identifier: AGPL-3.0-only
+--- libsignal-client/rust/bridge/shared/testing/src/lib.rs.old
++++ libsignal-client/rust/bridge/shared/testing/src/lib.rs
+@@ -1,3 +1,4 @@
++#![feature(rustc_attrs)]
+ //
+ // Copyright 2024 Signal Messenger, LLC.
+ // SPDX-License-Identifier: AGPL-3.0-only
+--- libsignal-client/rust/bridge/shared/types/src/lib.rs.old
++++ libsignal-client/rust/bridge/shared/types/src/lib.rs
+@@ -1,3 +1,4 @@
++#![feature(rustc_attrs)]
+ //
+ // Copyright 2020-2021 Signal Messenger, LLC.
+ // SPDX-License-Identifier: AGPL-3.0-only
+--- libsignal-client/rust/bridge/shared/types/src/node/mod.rs.old
++++ libsignal-client/rust/bridge/shared/types/src/node/mod.rs
+@@ -21,6 +21,7 @@ macro_rules! node_register {
+     ( $name:ident ) => {
+         ::paste::paste! {
+             #[no_mangle] // necessary because we are linking as a cdylib
++            #[rustc_std_internal_symbol]
+             #[allow(non_upper_case_globals)]
+             #[linkme::distributed_slice($crate::node::LIBSIGNAL_FNS)]
+             static [<signal_register_node_ $name>]: (&str, $crate::node::JsFn) =

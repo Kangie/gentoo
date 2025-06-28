@@ -1,0 +1,15 @@
+https://build.opensuse.org/projects/network:im:signal/packages/libsignal/files/ring-no-static.patch
+Do not emit "static" to cargo, that option is broken (rustc tries to repack LTO objects and corrupts them in the process leading to missing symbols).
+Make rustc believe everything foreign is a “dylib”. (It's not, but that makes it pass the .a file intact to GCC to do the linking)
+
+--- vendor/vendor/ring/build.rs.orig	2025-04-03 06:59:00.929946323 +0200
++++ vendor/vendor/ring/build.rs	2025-04-03 07:07:07.017891229 +0200
+@@ -545,7 +545,7 @@ fn build_library<'a>(
+ 
+     // Link the library. This works even when the library doesn't need to be
+     // rebuilt.
+-    println!("cargo:rustc-link-lib=static={}", lib_name);
++    println!("cargo:rustc-link-lib={}", lib_name);
+ }
+ 
+ fn obj_path(out_dir: &Path, src: &Path) -> PathBuf {

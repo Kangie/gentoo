@@ -1,0 +1,17 @@
+https://build.opensuse.org/projects/network:im:signal/packages/libsignal/files/tcp_ssl-test-requires-network.patch
+--- libsignal-0.72.1/rust/net/infra/src/tcp_ssl.rs.orig	2025-05-15 01:52:18.000000000 +0200
++++ libsignal-0.72.1/rust/net/infra/src/tcp_ssl.rs	2025-05-28 21:45:43.868081078 +0200
+@@ -568,13 +568,6 @@ mod test {
+         assert_matches!(result, Err(TransportConnectError::TcpConnectionFailed));
+ 
+         let elapsed = start.elapsed();
+-        assert_eq!(
+-            elapsed,
+-            crate::timeouts::TCP_CONNECTION_TIMEOUT,
+-            "Expected timeout after {:?}, but took {:?}",
+-            crate::timeouts::TCP_CONNECTION_TIMEOUT,
+-            elapsed
+-        );
+     }
+ 
+     #[tokio::test]

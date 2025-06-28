@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "https://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+  <maintainer type="person">
+    <email>exampledev@gentoo.org</email>
+    <description>Primary maintainer</description>
+  </maintainer>
+  <maintainer type="project">
+    <email>exampleproject@gentoo.org</email>
+    <name>Gentoo Example Project</name>
+  </maintainer>
+  <longdescription>
+    libsignal contains platform-agnostic APIs used by the official Signal clients and servers.
+    This package contains the NodeJS native module used by `signal-desktop` and is not intended to be used outside that application.
+  </longdescription>
+</pkgmetadata>

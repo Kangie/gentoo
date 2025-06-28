@@ -1,0 +1,19 @@
+https://build.opensuse.org/projects/network:im:signal/packages/libsignal/files/boringssl-sys-no-static.patch
+Make rustc believe boringssl is a “dylib”.
+(It is not, but this makes rustc call gcc to do the linking,
+which is needed as only gcc itself can link its own LTO objects.)
+
+--- vendor/vendor/boring-sys/build/main.rs.orig	2025-04-03 06:59:00.349946361 +0200
++++ vendor/vendor/boring-sys/build/main.rs	2025-04-03 07:03:57.645914243 +0200
+@@ -697,8 +697,9 @@ fn main() {
+     if let Some(cpp_lib) = get_cpp_runtime_lib(&config) {
+         println!("cargo:rustc-link-lib={}", cpp_lib);
+     }
+-    println!("cargo:rustc-link-lib=static=crypto");
+-    println!("cargo:rustc-link-lib=static=ssl");
++    println!("cargo:rustc-link-lib=crypto");
++    println!("cargo:rustc-link-lib=ssl");
++    println!("cargo:rustc-link-lib=crypto"); // help resolve linker ordering issues causing missing symbols
+ 
+     let include_path = config.env.include_path.clone().unwrap_or_else(|| {
+         if let Some(bssl_path) = &config.env.path {
