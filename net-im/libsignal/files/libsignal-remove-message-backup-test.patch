@@ -1,9 +1,21 @@
---- libsignal-0.64.1/rust/message-backup/tests/test_cases.rs.orig	2024-12-06 22:05:30.000000000 +0100
-+++ libsignal-0.64.1/rust/message-backup/tests/test_cases.rs	2025-01-08 22:48:55.182743785 +0100
-@@ -63,21 +63,6 @@ fn can_serialize_json_proto(input: Fixtu
+From 1f6322a8f168a1711230f3b7251765fb00a7e9e8 Mon Sep 17 00:00:00 2001
+From: Matt Jolly <kangie@gentoo.org>
+Date: Sat, 28 Jun 2025 22:19:31 +1000
+Subject: [PATCH] Rebased SUSE patch for 0.76.1
+
+---
+ rust/message-backup/tests/test_cases.rs | 24 ------------------------
+ 1 file changed, 24 deletions(-)
+
+diff --git a/rust/message-backup/tests/test_cases.rs b/rust/message-backup/tests/test_cases.rs
+index e506539..aad7806 100644
+--- a/rust/message-backup/tests/test_cases.rs
++++ b/rust/message-backup/tests/test_cases.rs
+@@ -62,30 +62,6 @@ fn can_serialize_json_proto(input: Fixture<&str>) {
+     )
  }
  
- #[test]
+-#[test]
 -fn serialized_account_settings_is_valid() {
 -    let binproto = include_bytes!("res/canonical-backup.binproto");
 -    let expected_canonical_str = include_str!("res/canonical-backup.expected.json");
@@ -15,10 +27,21 @@
 -        .expect("valid backup");
 -    let canonical_repr =
 -        libsignal_message_backup::backup::serialize::Backup::from(result).to_string_pretty();
+-
+-    if write_expected_output() {
+-        let path =
+-            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/res/canonical-backup.expected.json");
+-        eprintln!("writing expected contents to {path:?}");
+-        std::fs::write(path, &canonical_repr).expect("failed to overwrite expected contents");
+-        return;
+-    }
+-
 -    pretty_assertions::assert_str_eq!(expected_canonical_str, canonical_repr)
 -}
 -
--#[test]
+ #[test]
  fn scrambler_smoke_test() {
      // Scrambling is deterministic, so we can check against expected output.
-     let binproto = include_bytes!("res/canonical-backup.binproto");
+-- 
+2.49.0
+

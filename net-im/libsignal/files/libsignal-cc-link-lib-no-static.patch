@@ -1,0 +1,19 @@
+https://build.opensuse.org/projects/network:im:signal/packages/libsignal/files/cc-link-lib-no-static.patch
+Do not make cc emit "static" to cargo, that option is broken (does not work with GCC LTO).
+Make rustc believe everything foreign is a “dylib”. (It's not, but that makes it pass them to GCC to do the linking)
+
+--- libsignal-client/vendor/cc/src/lib.rs.old	2023-08-01 08:50:09.041289300 +0000
++++ libsignal-client/vendor/cc/src/lib.rs	2023-08-01 16:29:43.978070600 +0000
+@@ -1332,10 +1332,10 @@
+ 
+         if self.link_lib_modifiers.is_empty() {
+             self.cargo_output
+-                .print_metadata(&format_args!("cargo:rustc-link-lib=static={}", lib_name));
++                .print_metadata(&format_args!("cargo:rustc-link-lib={}", lib_name));
+         } else {
+             self.cargo_output.print_metadata(&format_args!(
+-                "cargo:rustc-link-lib=static:{}={}",
++                "cargo:rustc-link-lib:{}={}",
+                 JoinOsStrs {
+                     slice: &self.link_lib_modifiers,
+                     delimiter: ','

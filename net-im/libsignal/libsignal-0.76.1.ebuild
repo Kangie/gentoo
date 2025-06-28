@@ -3,11 +3,25 @@
 
 EAPI=8
 
-inherit cargo cmake electron python-any-r1
+PYTHON_COMPAT=( python3_{11..13} )
+
+declare -A GIT_CRATES=(
+        [boring-sys]='https://github.com/signalapp/boring;bb42da53b3900aea1936d41decf9403f25c4259c;boring-%commit%/boring-sys'
+        [boring]='https://github.com/signalapp/boring;bb42da53b3900aea1936d41decf9403f25c4259c;boring-%commit%/boring'
+        [curve25519-dalek-derive]='https://github.com/signalapp/curve25519-dalek;7c6d34756355a3566a704da84dce7b1c039a6572;curve25519-dalek-%commit%/curve25519-dalek-derive'
+        [curve25519-dalek]='https://github.com/signalapp/curve25519-dalek;7c6d34756355a3566a704da84dce7b1c039a6572;curve25519-dalek-%commit%/curve25519-dalek'
+        [spqr]='https://github.com/signalapp/SparsePostQuantumRatchet;d6c10734689ec5844d09c1a054a288d36cde2adc;SparsePostQuantumRatchet-%commit%'
+        [tokio-boring]='https://github.com/signalapp/boring;bb42da53b3900aea1936d41decf9403f25c4259c;boring-%commit%/tokio-boring'
+)
+
+inherit cargo python-any-r1
 
 DESCRIPTION="libsignal contains platform-agnostic APIs used by the official Signal clients and servers."
 HOMEPAGE="https://signal.org/"
-SRC_URI="https://github.com/signalapp/libsignal/archive/refs/tags/v${PV}.tar.gz -> ${P}.tar.gz"
+SRC_URI="
+	https://github.com/signalapp/libsignal/archive/refs/tags/v${PV}.tar.gz -> ${P}.tar.gz
+	https://deps.gentoo.zip/net-im/libsignal/${P}-crates.tar.xz
+"
 
 LICENSE="AGPL-3.0"
 SLOT="0"
@@ -18,14 +32,32 @@ KEYWORDS="~amd64 ~arm64"
 # The below is valid if the same run-time depends are required to compile.
 #DEPEND="${RDEPEND}"
 
-# Build-time dependencies that are executed during the emerge process, and
-# only need to be present in the native build system (CBUILD). Example:
-#BDEPEND="virtual/pkgconfig"
+BDEPEND="
+	dev-build/cmake
+	sys-devel/cargo-auditability
+"
 
 # Refer to the SUSE spec if in doubt
 # https://build.opensuse.org/projects/network:im:signal/packages/libsignal/files/libsignal.spec
 
+PATCHES=(
+	# Patch build scriptt
+	"${FILESDIR}"/${PN}-build_node_bridge-inject-options.patch
+	# fix rust breaking gcc LTO
+	#"${FILESDIR}"/${PN}-boringssl-sys-no-static.patch
+	"${FILESDIR}"/${PN}-client-visibility-hidden.patch
+	#"${FILESDIR}"/${PN}-cc-link-lib-no-static.patch
+	#"${FILESDIR}"/${PN}-ring-no-static.patch
+	# Tests	
+	"${FILESDIR}"/${PN}-remove-message-backup-test.patch
+	"${FILESDIR}"/${PN}-dns_lookup-test.patch
+)
+
 pkg_setup() {
+	rust_pkg_setup
+	python-any-r1_pkg_setup
+	# Do we need to build against electron node?
+
 	# Use CFLAGS from the environment, not whatever rust thinks is apprapriate
 	export CRATE_CC_NO_DEFAULTS=1
 	# Ensure cmake gets the RelWithDebInfo profile
@@ -35,44 +67,13 @@ pkg_setup() {
 	export V=1
 	# make `ring crate` output build log
 	export CC_ENABLE_DEBUG_OUTPUT=1
+	# Disable incremental compilation
+	export CARGO_INCREMENTAL=0
 }
 
-# The following src_configure function is implemented as default by portage, so
-# you only need to call it if you need a different behaviour.
-#src_configure() {
-	# Most open-source packages use GNU autoconf for configuration.
-	# The default, quickest (and preferred) way of running configure is:
-	#econf
-	#
-	# You could use something similar to the following lines to
-	# configure your package before compilation.  The "|| die" portion
-	# at the end will stop the build process if the command fails.
-	# You should use this at the end of critical commands in the build
-	# process.  (Hint: Most commands are critical, that is, the build
-	# process should abort if they aren't successful.)
-	#./configure \
-	#	--host=${CHOST} \
-	#	--prefix=/usr \
-	#	--infodir=/usr/share/info \
-	#	--mandir=/usr/share/man || die
-	# Note the use of --infodir and --mandir, above. This is to make
-	# this package FHS 2.2-compliant.  For more information, see
-	#   https://wiki.linuxfoundation.org/lsb/fhs
-#}
-
-# The following src_compile function is implemented as default by portage, so
-# you only need to call it, if you need different behaviour.
-#src_compile() {
-	# emake is a script that calls the standard GNU make with parallel
-	# building options for speedier builds (especially on SMP systems).
-	# Try emake first.  It might not work for some packages, because
-	# some makefiles have bugs related to parallelism, in these cases,
-	# use emake -j1 to limit make to a single process.  The -j1 is a
-	# visual clue to others that the makefiles have bugs that have been
-	# worked around.
-
-	#emake
-#}
+src_compile() {
+	${EPYTHON} ./node/build_node_bridge.py --auditable --check
+}
 
 
 src_test() {
@@ -89,6 +90,8 @@ src_test() {
 	cat ${T}/objdump
 	! grep -F libcrypto ${T}/objdump
 	! grep -F libssl ${T}/objdump
+
+	${EPYTHON} ./node/build_node_bridge.py --check
 }
 
 src_install() {
