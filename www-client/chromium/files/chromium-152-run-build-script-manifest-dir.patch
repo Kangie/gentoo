@@ -1,0 +1,20 @@
+diff --git a/build/rust/gni_impl/run_build_script.py b/build/rust/gni_impl/run_build_script.py
+index 102a0c5ff4ea..2e1020d8beea 100755
+--- a/build/rust/gni_impl/run_build_script.py
++++ b/build/rust/gni_impl/run_build_script.py
+@@ -145,8 +145,13 @@ def main():
+         flags.seek(0)
+         env["CARGO_ENCODED_RUSTFLAGS"] = '\x1f'.join(flags.readlines())
+     if args.env:
+-      for e in args.env:
+-        (k, v) = e.split("=")
++      for e in args.env:
++        (k, v) = e.split("=", 1)
++        # Some GN-generated Cargo env vars are relative (e.g. ".").
++        # Normalise them so downstream build.rs code that expects a concrete
++        # directory path does not fail on Path::file_name().
++        if k == "CARGO_MANIFEST_DIR" and not os.path.isabs(v):
++          v = os.path.abspath(os.path.join(args.src_dir, v))
+         env[k] = v
+     if "OPT_LEVEL" not in env:
+       env["OPT_LEVEL"] = "0"

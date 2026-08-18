@@ -86,19 +86,24 @@ LICENSE+=" rar? ( unRAR )"
 SLOT="stable"
 KEYWORDS="amd64 arm64"
 
-IUSE_SYSTEM_LIBS="+system-harfbuzz +system-icu +system-zstd"
+IUSE_SYSTEM_LIBS="+system-harfbuzz +system-icu system-ffmpeg +system-zstd"
 IUSE="+X ${IUSE_SYSTEM_LIBS} bindist bundled-toolchain cups debug ffmpeg-chromium gtk4 +hangouts headless kerberos +official pax-kernel pgo"
 IUSE+=" +proprietary-codecs pulseaudio qt6 +rar +screencast selinux test +vaapi +wayland +widevine cpu_flags_ppc_vsx3"
 RESTRICT="
 	!bindist? ( bindist )
 	!test? ( test )
-	arm64? ( test )" # Tests require CFI, which requires LTO, which is broken on arm64 with LLVM 21.
+	arm64? ( llvm_slot_21? ( test ) )" # Tests require CFI, which requires LTO, which is broken on arm64 with LLVM 21.
 
 REQUIRED_USE="
+	bindist? ( 
+		!proprietary-codecs ||
+		( ^^ ( ffmpeg-chromium system-ffmpeg ) )
+	)
+	ffmpeg-chromium? ( bindist proprietary-codecs )
 	!headless? ( || ( X wayland ) )
 	pgo? ( X !wayland )
 	screencast? ( wayland )
-	ffmpeg-chromium? ( bindist proprietary-codecs )
+	system-ffmpeg? ( bindist proprietary-codecs )
 "
 
 COMMON_X_DEPEND="
@@ -186,8 +191,8 @@ RDEPEND="${COMMON_DEPEND}
 	virtual/ttf-fonts
 	selinux? ( sec-policy/selinux-chromium )
 	bindist? (
-		!ffmpeg-chromium? ( >=media-video/ffmpeg-6.1-r1:0/58.60.60[chromium] )
 		ffmpeg-chromium? ( media-video/ffmpeg-chromium:${PV%%\.*} )
+		system-ffmpeg? ( >=media-video/ffmpeg-6.1-r1:0/58.60.60[chromium] )
 	)
 "
 # For M149+ pipewire is a mandatory build-time dependency, but it's optional at runtime for most configurations.
@@ -314,9 +319,11 @@ pkg_pretend() {
 		done
 	fi
 
-	if ! use bindist && use ffmpeg-chromium; then
-		ewarn "Ignoring USE=ffmpeg-chromium, USE=bindist is not set."
-	fi
+	for flag in ffmpeg-chromium system-ffmpeg; do
+		if use ${flag} && ! use bindist; then # REQUIRED_USE should prevent this, but just in case.
+			ewarn "Ignoring USE=${flag}, USE=bindist is not set."
+		fi
+	done
 }
 
 pkg_setup() {
@@ -1308,21 +1315,18 @@ chromium_configure() {
 		# use system go
 		"tint_use_system_go=true"
 	)
-
-	if use bindist ; then
-		myconf_gn+=(
-			# If this is set to false Chromium won't be able to load any proprietary codecs
-			# even if provided with an ffmpeg capable of h264/aac decoding
-			"proprietary_codecs=true"
-			'ffmpeg_branding="Chrome"'
-			# build ffmpeg as an external component (libffmpeg.so) that we can remove / substitute
-			"is_component_ffmpeg=true"
-		)
-	else
-		myconf_gn+=(
+	# If this is set to false Chromium won't be able to load any proprietary codecs
+	# even if provided with an ffmpeg capable of h264/aac decoding.
+	# For bindist builds, either path is supported: no proprietary codecs (live media), or a component ffmpeg
+	# that we can replace downstream (binhost) when proprietary-codecs is enabled.
+	myconf_gn+=(
 			"proprietary_codecs=$(usex proprietary-codecs true false)"
 			"ffmpeg_branding=\"$(usex proprietary-codecs Chrome Chromium)\""
-		)
+	)
+
+	if use bindist && use proprietary-codecs; then
+		# No need to build an external ffmpeg if we don't want proprietary codecs. 
+		myconf_gn+=( "is_component_ffmpeg=true" )
 	fi
 
 	if use headless; then
@@ -1697,15 +1701,17 @@ src_install() {
 	doins out/Release/*.bin
 	doins out/Release/*.pak
 
-	if use bindist; then
+	if use bindist && use proprietary-codecs; then
 		# We built libffmpeg as a component library, but we can't distribute it
 		# with proprietary codec support. Remove it and make a symlink to the requested
 		# system library.
 		rm -f out/Release/libffmpeg.so \
 			|| die "Failed to remove bundled libffmpeg.so (with proprietary codecs)"
 		# symlink the libffmpeg.so from either ffmpeg-chromium or ffmpeg[chromium].
-		einfo "Creating symlink to libffmpeg.so from $(usex ffmpeg-chromium ffmpeg-chromium ffmpeg[chromium])..."
-		dosym ../chromium/libffmpeg.so$(usex ffmpeg-chromium .${PV%%\.*} "") \
+		local ffmpeg_lib="../chromium/libffmpeg.so"
+		use ffmpeg-chromium && ffmpeg_lib+=".${PV%%\.*}" # soname matches chromium major version, if we get a mid-cycle mandatory bump use DEPENDS.
+		einfo "Creating symlink to libffmpeg.so from media-video/$(usex ffmpeg-chromium ffmpeg-chromium ffmpeg[chromium])..."
+		dosym "${ffmpeg_lib}" \
 			/usr/$(get_libdir)/chromium-browser/libffmpeg.so
 	fi
 

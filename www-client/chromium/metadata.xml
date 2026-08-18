@@ -27,6 +27,7 @@
 		<flag name="rar">Enable the Safe Browsing feature to inspect RAR files.</flag>
 		<flag name="system-harfbuzz">Use system <pkg>media-libs/harfbuzz</pkg> instead of the bundled library.</flag>
 		<flag name="system-icu">Use system <pkg>dev-libs/icu</pkg> instead of the bundled one</flag>
+		<flag name="system-ffmpeg">(binpkg only) Use system <pkg>media-video/ffmpeg</pkg> instead of the Chromium FFmpeg fork (<pkg>media-video/ffmpeg-chromium</pkg>)</flag>
 		<flag name="system-zstd">Use system <pkg>app-arch/zstd</pkg> instead of the bundled one.</flag>
 		<flag name="widevine">Unsupported closed-source DRM capability (required by Netflix VOD)</flag>
 	</use>
